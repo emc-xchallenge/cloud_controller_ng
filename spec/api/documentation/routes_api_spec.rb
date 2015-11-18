@@ -47,9 +47,38 @@ resource 'Routes', type: [:api, :legacy_api] do
         stub_unbind(route_binding)
       end
 
-      standard_model_list :route, VCAP::CloudController::RoutesController
       standard_model_get :route, nested_associations: [:domain, :space, :service_instance]
       standard_model_delete :route, query_string: 'recursive=true'
+    end
+
+    get '/v2/routes' do
+      before do
+        route_binding = VCAP::CloudController::RouteBinding.make(service_instance: service_instance, route: route)
+        stub_unbind(route_binding)
+      end
+
+      controller = VCAP::CloudController::RoutesController
+      if controller.query_parameters.size > 0
+        query_parameters = controller.query_parameters.to_a.reject {|q| q == 'generate_port' }
+
+        query_parameter_description = 'Parameters used to filter the result set.<br/>'
+        query_parameter_description += 'Format queries as &lt;filter&gt;&lt;op&gt;&lt;value&gt;<br/>'
+        query_parameter_description += ' Valid ops: : &gt;= &lt;= &lt; &gt; IN<br/>'
+        query_parameter_description += " Valid filters: #{query_parameters.join(', ')}"
+
+        examples = ['q=filter:value', 'q=filter>value', 'q=filter IN a,b,c']
+        request_parameter :q, query_parameter_description, { html: true, example_values: examples }
+      end
+      pagination_parameters
+      request_parameter :'inline-relations-depth', "0 - don't inline any relations and return URLs.  Otherwise, inline to depth N.", deprecated: true
+      request_parameter :'orphan-relations', '0 - de-duplicate object entries in response', deprecated: true
+      request_parameter :'exclude-relations', 'comma-delimited list of relations to drop from response', deprecated: true
+      request_parameter :'include-relations', 'comma-delimited list of the only relations to include in response', deprecated: true
+
+      example_request "List all Routes" do
+        expect(status).to eq 200
+        standard_list_response parsed_response, :route
+      end
     end
 
     post '/v2/routes/' do
@@ -88,8 +117,6 @@ EOF
         client.put "/v2/routes/#{guid}", body, headers
 
         expect(status).to eq 201
-        # expect(parsed_response['entity']['host']).to eq('')
-        # expect(parsed_response['entity']['path']).to eq('/bar/baz')
       end
     end
   end
