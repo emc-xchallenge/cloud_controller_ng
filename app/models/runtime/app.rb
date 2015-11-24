@@ -94,7 +94,7 @@ module VCAP::CloudController
       [
         AppEnvironmentPolicy.new(self),
         MaxDiskQuotaPolicy.new(self, max_app_disk_in_mb),
-        MinDiskQuotaPolicy.new(self),
+        MinDiskQuotaPolicy.new(self, min_app_disk_in_mb),
         MetadataPolicy.new(self, metadata_deserialized),
         MinMemoryPolicy.new(self),
         MaxMemoryPolicy.new(self, space, :space_quota_exceeded),
@@ -379,6 +379,10 @@ module VCAP::CloudController
 
     def max_app_disk_in_mb
       VCAP::CloudController::Config.config[:maximum_app_disk_in_mb]
+    end
+
+    def min_app_disk_in_mb
+      VCAP::CloudController::Config.config[:minimum_app_disk_in_mb]
     end
 
     # We need to overide this ourselves because we are really doing a
